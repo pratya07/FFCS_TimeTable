@@ -1,0 +1,775 @@
+Our Code:
+
+
+/*
+09 January 2019
+TT Generator
+Authors:
+Pratyansh Chauhan
+Srinivas Natrajan
+Shashwat
+*/
+#include<iostream>
+#include<conio.h>
+#include<fstream>
+#include<cstdio>
+#include<string.h>
+#include<stdio.h>
+#include <stdlib.h>
+#include <list>
+#include <stack>
+#define FILE "maindata.txt"//File used for input and output of data.
+using namespace std;
+void clrscr()
+{
+system("cls");
+}
+struct sdbst//Structure definition for creating nodes of a BST.
+{
+sdbst *left;
+float pop;
+char pname[80];
+char loc[80];
+char slot[80];
+sdbst *right;
+};
+struct mdbst//Structure definition for creating nodes of a linked list having roots to a BST (Multi dimensional BST)
+{
+mdbst *next;
+char course[80];
+sdbst *root;
+};
+struct course_data//Structure definition to perform operations on input and output data fields.
+{
+float pop;//To store popularity of a Professor
+char pname[80];//To store name of the Professor
+char course[80];//To store the Professor's Course code.
+char loc[80];//To store location of the classes of Professor.
+char slot[80];//To store Slot of the professor for the particular course.
+};
+class file//Class definition to perform file handling
+{
+private:
+course_data d;
+public:
+file();
+void getData();
+void putData();
+void readFile(int);
+void writeFile(int);
+friend class data;
+};
+file::file()//Constructor to Initialize variables with default values
+{
+d.pop=50.0;
+strcpy(d.pname,"No name");
+strcpy(d.course,"CCC0000");
+strcpy(d.loc,"BBBB");
+strcpy(d.slot,"S0+TS0+TSS0");
+}
+void file::writeFile(int apnd=1)//Function to create the file
+{
+int c=1;
+ofstream fout;
+if(apnd==2)
+{
+fout.open(FILE,ios::out);
+fout.seekp(0,ios::beg);
+}
+else
+fout.open(FILE,ios::out|ios::app);//To open file and overwrite or append data depending on parameter apnd
+while(c)
+{
+getData();//To input data from the user
+fout.write((char*)&d,sizeof(d));//To write in the file
+cout<<"Press 0 to stop: ";
+cin>>c;
+cout<<endl;
+}
+}
+void file::readFile(int fp)//Function to read from the file
+{
+ifstream fin;
+fin.open(FILE,ios::in);
+fin.seekg(fp*sizeof(d),ios::beg);//To reach the file at fp*sizeof(d)th byte position to perform reading after previous inputs from file.
+fin.read((char*)&d,sizeof(d));//Function to read and store data in d.
+fin.close();
+}
+void file::getData()//To get data from the user
+{
+cout<<"Enter popularity: ";
+cin>>d.pop;
+cin.get();
+cout<<"Enter professor name: ";
+gets(d.pname);
+cout<<"Enter the course name : ";
+cin>>d.course;
+cout<<"Enter the location ";
+cin>>d.loc;
+cout<<"Enter the slot : ";
+cin>>d.slot;
+}
+void file::putData()//To print data in the console screen
+{
+cout<<endl<<"Popularity: "<<d.pop<<endl<<"Professor Name: "<<d.pname<<endl<<"Course Name : "<<d.course<<endl<<"Location : "<<d.loc<<endl<<"Slot : "<<d.slot<<endl;
+}
+class TimeTable;//Declaration for declaring as friend
+class data//Class to construct/build necessary data structures to perform the required operation
+{
+private:
+course_data cd;
+sdbst *sdbstroot;//Pointer of type sdbst structure defined earlier
+mdbst *mdbstheader;//Pointer of type mdbst structure defined earlier
+int filepointer;//Variable to store byte position on the file
+int filelength;//Variable to store file length
+void fileLength();
+void inorderMdbst(sdbst*);
+public:
+data();
+mdbst* newNodemdbst();
+void insertMdbst();
+sdbst* newNodesdbst();
+sdbst* insertSdbst(sdbst*);
+void displayMdbst();
+void quicktt();
+void search();
+sdbst* traverse(sdbst* temp,char s_pname[],char s_loc[],int s_pop,char s_slot[]);
+friend class TimeTable;
+};
+void data::fileLength()//To calculate file length
+{
+ifstream fin;
+fin.open(FILE);
+fin.seekg(0,ios::end);
+filelength=fin.tellg()/sizeof(cd);//To store file length in filelength variable of class data
+}
+data::data()//Constructor to initialize default values
+{
+sdbstroot=NULL;
+mdbstheader=NULL;
+filepointer=0;
+filelength=0;
+}
+mdbst* data::newNodemdbst()//To create new node using data in the file
+{
+mdbst *newnode=new mdbst;//Allocating memory to newnode pointer of type mdbst
+file f;//declaring object of type class file
+f.readFile(filepointer);//Passing the file pointer to perform reading from a particular position
+cd=f.d;//Invoking copy constructor to copy data read from file inj f.d to cd
+strcpy(newnode->course,cd.course);//Copying course to newnode
+newnode->next=NULL;//Assigning default value NULL
+newnode->root=NULL;//Assigning default value NULL
+return newnode;//Returning address of newnode to function call
+}
+void data::insertMdbst()//Function to create linked list that will store Multi dimensional BST
+{
+fileLength();//Calling function to calculate number of entries made in the file
+for(int i=0;i<filelength;i++)//TO read from the file exactly equal to the number of entries present in the file
+{
+mdbst *node=newNodemdbst(),*traverse=mdbstheader;//Declaring temporary variables
+while((traverse!=NULL)&&(strcmp(node->course,traverse->course)!=0))
+traverse=traverse->next;//To traverse until the list is exhausted or a matching course is found
+if(traverse==NULL)//If the course is not present
+{
+node->next=mdbstheader;//New node for the course is created
+mdbstheader=node;
+traverse=node;
+}
+traverse->root=insertSdbst(traverse->root);//Insertion of data is made in the tree pointed by the root
+filepointer++;//Incrementing file position pointer by one after an entry is read
+}
+}
+sdbst* data::newNodesdbst()//Function to create a node for the BST
+{
+sdbst *newnode=new sdbst;//Allocating memory to a pointer of type sdbst
+strcpy(newnode->loc,cd.loc);
+strcpy(newnode->pname,cd.pname);
+strcpy(newnode->slot,cd.slot);
+newnode->pop=cd.pop;//Copying data from the class variables to the node
+newnode->left=newnode->right=NULL;//Assigning default values to child nodes as NULL
+return(newnode);
+}
+sdbst* data::insertSdbst(sdbst *head)//Function that is called to insert nodes in appropriate BST
+{
+if(head==NULL)//When an appropriate place for insertion of node in the particular BST is found
+return(newNodesdbst());//Link is established by passing the address
+else if(head->pop>=cd.pop)//To continue searching for the appropriate place in the left subtree
+head->left=insertSdbst(head->left);
+else
+head->right=insertSdbst(head->right);//To continue searching for the appropriate place in the left subtree
+return(head);
+}
+void data::displayMdbst()//To display data from the MDBST created
+{
+cout<<endl<<"Data as stored in MDBST: "<<endl;
+mdbst *node=mdbstheader;
+while(node!=NULL)
+{
+cout<<endl<<"Data in "<<node->course<<": "<<endl;
+inorderMdbst(node->root);//To print data in ascending order of popularity for a given course
+node=node->next;
+}
+}
+void data::inorderMdbst(sdbst *root)//To display data stored in a BST of a given course
+{
+if(root==NULL)
+return;//exit function call
+inorderMdbst(root->left);//Travel to Left
+cout<<endl<<"Popularity: "<<root->pop<<endl<<"Professor name: "<<root->pname<<endl<<"Location: "<<root->loc<<endl<<"Slot: "<<root->slot<<endl;//Print data of current node
+inorderMdbst(root->right);//Travel to right
+return;//exit function
+}
+//********************************************To generate fully optimized timetable*******************************************************
+typedef struct optimizedlinkedlist
+{
+sdbst *node;
+struct optimizedlinkedlist *next;
+} *oll;
+class TimeTable
+{
+private:
+float pop;
+char course[80];
+mdbst *courseptr;
+sdbst *shortlist;
+oll optilist, finalselect;//Data Member
+void shortList();
+void searchCourse(data&);
+void inOrdercourseptr(sdbst *);
+void inOrderoptilist(sdbst *,int ,char *);
+void insertOptilist(sdbst *,int ,char *);
+float getWeight(sdbst *, int, char *);//Member methods.
+public:
+TimeTable()
+{
+pop=0.0;
+strcpy(course,"CourseCode");
+courseptr=NULL;
+shortlist=NULL;
+finalselect=optilist=NULL;
+}
+void generateFull(file , data);
+void getData(data&, int, char *);
+void genOptilist(int ,char *);
+void display();
+};
+void TimeTable::getData(data &mdbstobj, int slot_pref, char loc_pref[])
+{
+cout<<endl<<"Enter minimum popularity rating for teacher: ";
+cin>>pop;
+cout<<"Enter course name: ";
+cin>>course;
+searchCourse(mdbstobj);
+shortList();
+}
+void TimeTable::searchCourse(data &mdbstobj)
+{
+mdbst *node=mdbstobj.mdbstheader;
+while(node!=NULL)
+{
+if(strcmp(node->course,course)==0)
+{
+courseptr=node;
+break;
+}
+node=node->next;
+}
+}
+void TimeTable::inOrdercourseptr(sdbst *root)
+{
+if(root==NULL)
+return;
+if(root->pop>pop)
+{
+shortlist=root;
+inOrdercourseptr(root->left);
+}
+else if(root->pop<pop)
+{
+inOrdercourseptr(root->right);
+}
+else
+{
+shortlist=root;
+return;
+}
+}
+void TimeTable::shortList()
+{
+if(courseptr==NULL)
+{
+cout<<"Course was not found"<<endl;
+return;
+}
+sdbst *troot=courseptr->root;
+inOrdercourseptr(troot);
+}
+void TimeTable::display()
+{
+if(finalselect==NULL)
+{
+cout<<"Records were not found"<<endl;
+return;
+}
+cout<<endl<<courseptr->course<<endl<<finalselect->node->pname<<endl<<finalselect->node->slot<<endl<<finalselect->node->pop<<endl<<finalselect->node->loc<<endl;
+}
+float TimeTable::getWeight(sdbst *node, int slot_pref, char loc_pref[])
+{
+if(node==NULL)
+return(-1);
+float weight=0.1;
+if((int)node->slot[1]==slot_pref)
+weight+=20.6;
+if(strcmpi(node->loc,loc_pref)==0)
+weight+=5.1;
+weight+=node->pop/25;
+return(weight);
+}
+void TimeTable::insertOptilist(sdbst *instnode, int slot_pref, char loc_pref[])
+{
+if(optilist==NULL)
+{
+oll newnode= new optimizedlinkedlist;
+newnode->node=instnode;
+newnode->next=optilist;
+optilist=newnode;
+return;
+}
+if(getWeight(optilist->node, slot_pref, loc_pref)<getWeight(instnode, slot_pref, loc_pref))
+{
+oll newnode= new optimizedlinkedlist;
+newnode->node=instnode;
+newnode->next=optilist;
+optilist=newnode;
+return;
+}
+oll tnode=optilist, btnode=optilist;
+while((tnode!=NULL) && (getWeight(tnode->node, slot_pref, loc_pref)>getWeight(instnode, slot_pref, loc_pref)))
+{
+btnode=tnode;
+tnode=tnode->next;
+}
+oll newnode= new optimizedlinkedlist;
+newnode->node=instnode;
+newnode->next=tnode;
+btnode->next=newnode;
+}
+void TimeTable::inOrderoptilist(sdbst *root, int slot_pref, char loc_pref[])
+{
+if (root==NULL)
+return;
+inOrderoptilist(root->left,slot_pref,loc_pref);
+if(root->pop>=shortlist->pop)
+insertOptilist(root,slot_pref,loc_pref);
+inOrderoptilist(root->right,slot_pref,loc_pref);
+}
+void TimeTable::genOptilist(int slot_pref, char loc_pref[])
+{
+optilist=NULL;
+if(shortlist!=NULL)
+inOrderoptilist(courseptr->root,slot_pref,loc_pref);
+else
+optilist=NULL;
+finalselect=optilist;
+}
+void TimeTable::generateFull(file fileop, data dataop)
+{
+int n=0, slot_pref, i=0, j=0;
+char loc_pref[80];
+cout<<"Enter the number of course: ";
+cin>>n;
+TimeTable T[n];
+for(i=0;i<n;i++)
+T[i].getData(dataop,slot_pref,loc_pref);
+cout<<endl<<"Enter 1 for forenoon slot preference or 2 for afternoon preference: ";
+cin>>slot_pref;
+cout<<endl<<"Enter preferred location (SJT, TT, SMV, CBMR, MB, GDN): ";
+cin>>loc_pref;
+for(i=0;i<n;i++)
+T[i].genOptilist(slot_pref, loc_pref);
+for(i=0;i<n;i++)
+{
+for(j=0;j<n;j++)
+{
+if(i==j)
+continue;
+if((T[i].finalselect->node->slot[0]==T[j].finalselect->node->slot[0])&&(T[i].finalselect->node->slot[1]==T[j].finalselect->node->slot[1]))
+{
+if(finalselect==NULL)
+{
+cout<<endl<<"Optimum solution doesn't exist! Try again with different parameters"<<endl;
+return;
+}
+else if(finalselect->next==NULL)
+{
+cout<<"Optimum solution doesn't exist! Try again with different parameters";
+return;
+}
+if((getWeight(T[i].finalselect->next->node,slot_pref,loc_pref))>(getWeight(T[j].finalselect->next->node,slot_pref,loc_pref)))
+T[i].finalselect=T[i].finalselect->next;
+else
+T[j].finalselect=T[j].finalselect->next;
+j=i=0;
+}
+}
+}
+clrscr();
+cout<<"Time Table: "<<endl;
+for(i=0;i<n;i++)
+T[i].display();
+}
+sdbst* data::traverse(sdbst* temp,char s_pname[],char s_loc[],int s_pop,char s_slot[])
+{
+if(temp==NULL)
+return temp;
+else
+{
+traverse(temp->right,s_pname,s_loc,s_pop,s_slot);
+if((!strcmp(s_pname,"XXXX") || !strcmp(temp->pname,s_pname)) && (!strcmp(s_loc,"XXXX") || !strcmp(temp->loc,s_loc)) && (!strcmp(s_slot,"XXXX") || !strcmp(temp->slot,s_slot))&& (s_pop==-1 || s_pop==temp->pop)) cout<<endl<<endl<<temp->pop<<endl<<temp->loc<<endl<<temp->pname<<endl<<temp->slot;
+traverse(temp->left,s_pname,s_loc,s_pop,s_slot);
+}
+}
+//Topological Sorting - For prerequisite courses and their assignment
+class Graph //Creating a class named Graph with
+{
+int V; //V as the number of vertex as well as the index for array of subjects.
+list<int> *adj; //Using List STL for adj list.
+void topological_recur(int v, bool visited[]);
+public:
+Graph(int V); //Constructor
+void addEdge(int v, int w);
+void topologicalSort();
+};
+struct stacks //Creating a stack
+{
+int top;
+int arr[50];
+}stack1;
+void push_stack(int a)//Push function for stack
+{
+stack1.top+=1;
+stack1.arr[stack1.top] = a;
+}
+int pop_stack()//Pop function for stack.
+{
+int a=0;
+if(stack1.top==-1)
+return -1;
+else
+a = stack1.arr[stack1.top];
+stack1.top -=1;
+return a;
+}
+Graph::Graph(int V)
+{
+this->V = V; //Assigning value of V = the argument accepted using this pointer.this here is class Graph.
+adj = new list<int>[V]; //Memory allocation for the adjacency list.
+}
+void Graph::addEdge(int v, int w)
+{
+adj[v].push_back(w); //Using STL function to add edge to the adjacency list.
+}
+void Graph::topological_recur(int v, bool visited[])//Function to visited every vertex without any parent.
+{
+visited[v] = true;//Setting current vertex V as visited.
+list<int>::iterator i;
+for (i = adj[v].begin(); i != adj[v].end(); ++i)//For(i=beg(adj);i!=end(adj),i++)
+if (!visited[*i])//Checking if vertex with index *i is visited or not.
+topological_recur(*i, visited);//Recursive Step.
+push_stack(v);//Stack.push(v);//Pushing vertex V in stack if it is visited including all of it children.
+}
+void Graph::topologicalSort()
+{
+bool *visited = new bool[V];//boolean type array to keep track of visited and unvisited nodes.
+for (int i = 0; i < V; i++)
+visited[i] = false;//Assigning all nodes as unvisited.
+for (int i = 0; i < V; i++)//This loop basically traverses through all vertex based on the number.
+if (visited[i] == false)
+topological_recur(i, visited);//Recursive function only called when not visited.
+}
+void Prerequisites()
+{
+int c=1;
+while(c!=0)
+{
+cout<<"\n\n***MENU***\n"<<endl;
+cout<<"Prerequisite List"<<endl;
+cout<<"_________________________________________"<<endl;
+cout<<"1.Course 1\n2.Course 2\n3.Course 3"<<endl;
+cout<<"_________________________________________"<<endl;
+cout<<"Enter the choice. Enter 0 to exit: "<<endl;
+cin>>c;
+switch(c)
+{
+case 1:
+{
+string sub[6];
+Graph g(6);
+g.addEdge(5, 2);
+sub[5] = "Subject5";
+g.addEdge(5, 0);
+g.addEdge(4, 0);
+sub[4] = "Subject4";
+g.addEdge(4, 1);
+g.addEdge(2, 3);
+sub[2] = "Subject2";
+g.addEdge(3, 1);
+sub[3] = "Subject3";
+cout << "Following is a Prerequisite List of the chosen course \n\n";
+g.topologicalSort();
+while (stack1.top>0)
+{
+cout << sub[pop_stack()]<<endl;
+}
+break;
+}
+}
+}
+}
+int main()//Driver function for the program
+{
+int choice=0;
+file fileop;
+data dataop;
+while(choice!=5)
+{
+cout<<"Menu:"<<endl<<"1. Write in File"<<endl<<"2. Overwrite File"<<endl<<"3. Load Data from File"<<endl<<"4. Display Loaded Data"<<endl<<"5. Quit"<<endl<<"6. Fully Optimized Time Table"<<endl<<"7. Quick Time Table Mode "<<endl<<"8. Show Course Prerequisites"<<endl<<"9. Dynamic search on any given parameters" <<endl<<"Enter choice: ";
+cin>>choice;
+cout<<endl;
+switch(choice)
+{
+case 1:
+{
+fileop.writeFile();
+}
+break;
+case 2:
+{
+fileop.writeFile(2);
+}
+break;
+case 3:
+{
+dataop.insertMdbst();
+}
+break;
+case 4:
+{
+dataop.displayMdbst();
+}
+break;
+case 5:
+{
+clrscr();
+cout<<"-----------------------------------------------------------------------------------------------------------------------"<<endl<<"Thank you for using our product\nTT Generator Version 1.6\n-----------------------------------------------------------------------------------------------------------------------"<<endl<<"Credits:\nPratyansh Chauhan - Quick Time Table Generator and Fully Optimized Time Table Generator\nShashwat - Full Dynamical Search of Data\nSrinivas N. - Prerequisites of Given Courses\n\nGoodbye!\n";
+goto mark_end;
+}
+break;
+case 6:
+{
+TimeTable().generateFull(fileop, dataop);
+}
+break;
+case 7:
+dataop.quicktt();
+break;
+case 8:
+Prerequisites();
+break;
+case 9:
+dataop.search();
+break;
+default:
+{
+cout<<"Invalid input! Please try again.";
+}
+}
+cout<<endl<<endl<<"Press any key to continue.";
+getch();
+clrscr();
+}
+mark_end:
+return(0);
+}
+sdbst * slotsearch(sdbst * root,char c[],int n);
+sdbst * locsearch(sdbst * root,char c[],char place[]);
+void data::quicktt()
+{
+cout<<"------------------------------Welcome to the Quick TT mode !------------------------------"<<endl<<endl<<endl;
+cout<<"Enter the MODE in which you want to make your TT: "<<endl;
+cout<<"1. Popularity "<<endl<<"2. Location "<<endl<<"3. Morning/Afternoon Slot only"<<endl;
+int a;
+cin>>a;
+int n;
+cout<<"Enter the no. of courses: ";
+cin>>n;
+char c[10];
+sdbst * ar[n];//create an array of pointer to singe dimension-bst size of total courses .
+for(int i=0;i<n;i++)
+{
+mdbst * head=mdbstheader;
+cout<<i+1<<".)";
+cin>>c;
+while(strcmp(head->course,c)) head=head->next;
+ar[i]=head->root;
+}//this loop basically populates the array with addresses of the sd-bst of all courses entered
+strcpy(c,"");//this will store the previous slot=> to avoid collision/clashing of slots
+sdbst * temp;
+switch(a)
+{
+case 1://POPULARITY MODE:
+for(int j=0;j<n;j++)//visiting all the sdbst
+{
+temp=ar[j];
+while(temp->right && strcmp(temp->right->slot,c)) temp=temp->right;//basically go to the right subtree while checking tha there is no slot clash
+cout<<"______________________________"<<endl<<"Popularity: "<<temp->pop<<endl<<"Professor name: "<<temp->pname<<endl<<"Location: "<<temp->loc<<endl<<"Slot: "<<temp->slot<<endl<<"______________________________"<<endl<<endl;
+strcpy(c,temp->slot);//updating previous slot
+}
+break;
+case 2://LOCATION MODE
+char place[10];
+cout<<endl<<"Enter Your Preferred Venue: ";
+cin>>place;
+for(int j=0;j<n;j++)//visiting all the concerned sdbst
+{
+temp=locsearch(ar[j],c,place);//a recursive function which will return the address of concerned node
+cout<<"______________________________"<<endl<<"Popularity: "<<temp->pop<<endl<<"Professor name: "<<temp->pname<<endl<<"Location: "<<temp->loc<<endl<<"Slot: "<<temp->slot<<endl<<"______________________________"<<endl<<endl;
+strcpy(c,temp->slot);//updating previous slot
+}
+break;
+case 3:
+int x;
+cout<<endl<<"Enter '1' for Morning Slot and '2' for Afternoon Slots: ";
+cin>>x;
+for(int k=0;k<n;k++)//visiting all the concerned sdbst
+{
+temp=slotsearch(ar[k],c,x);//a recursive function which will return the address of concerned node
+cout<<"______________________________"<<endl<<"Popularity: "<<temp->pop<<endl<<"Professor name: "<<temp->pname<<endl<<"Location: "<<temp->loc<<endl<<"Slot: "<<temp->slot<<endl<<"______________________________"<<endl<<endl;
+strcpy(c,temp->slot); //updating previous slot
+}
+break;
+}
+}
+sdbst * locsearch(sdbst * root,char c[],char place[])
+{
+if(root==NULL) return NULL;
+if(strcmp(root->loc,place)) //if this isnt the concerned node then,
+{
+if(root->right && !strcmp(root->right->slot,c)|| (root->left && !strcmp(root->left->slot,c)) ) return root;//if the the children of the current nodes have slots clashing to the previous ones , then return th current node
+sdbst * t=locsearch(root->right,c,place);//if this isnt the conserned node then check in the right subtree
+return t?t:locsearch(root->left,c,place); //return the node which you've found in either of the subtrees
+}
+else return root;//this is when you have found your concerned node !
+}
+sdbst * slotsearch(sdbst * root,char c[],int n)
+{
+if(root==NULL) return NULL;//one of the base conditions
+if(root->slot[1]==char(n+'0')) return root;//if we got the timings matched, then return this node
+else
+{
+if(root->right && !strcmp(root->right->slot,c) || (root->left && !strcmp(root->left->slot,c)) ) return root;//if
+the children have clashing slots then return current node
+sdbst * t=slotsearch(root->right,c,n);//search the righsubtree
+return t?t:slotsearch(root->left,c,n); //return the concerned node if present in either of the subtrees
+}
+}
+//********************************************To search about any info about the courses*******************************************************
+void data::search()
+{
+float s_pop; //for input of popularity to be searched.
+char s_pname[80]; //for input of professor name to be searched.
+char s_course[80]; //for input of course to be searrched.
+char s_loc[80]; //for input of loacation to be searched.
+char s_slot[80]; //for input of slot to be searched.
+mdbst* temp=mdbstheader;//temp is a pointer variable which will point to linked list which have course data,pointer to root of tree.
+printf("Do you want to enter course(1 or 0) ");
+char choice='0';
+cin>>choice;//Variable to store choice of user whether he wants to filter that parameter or not.
+cin.ignore(1);
+cout<<endl;
+if(choice=='1')
+{
+getch();
+cout<<"Enter course: "<<endl;
+cin.getline(s_course,80);
+cin>>s_course;
+choice='0';//reset the value of choice.
+}
+else
+{
+strcpy(s_course,"XXXX");//make default value of course to be searched be xxxx(which will not be in the data).
+}
+printf("Do you want to enter professor name(1 or 0)");
+cin>>choice;
+cin.ignore(1);
+if(choice=='1')
+{
+cout<<"Enter professor name"<<endl;
+cin.getline(s_pname,80);
+cin>>s_pname;
+choice='0';//reset the value of choice.
+}
+else
+{
+strcpy(s_pname,"XXXX");
+}
+printf("Do you want to enter slot(1 or 0)");
+cin>>choice;
+if(choice=='1')
+{
+cout<<"Enter slot"<<endl;
+cin>>s_slot;
+choice='0';//reset the value of choice.
+}
+else
+{
+strcpy(s_slot,"XXXX");
+}
+printf("Do you want to enter location(1 or 0)");
+cin>>choice;
+if(choice=='1')
+{
+cout<<"Enter location"<<endl;
+cin>>s_loc;
+choice='0';//reset the value of choice.
+}
+else
+{
+strcpy(s_loc,"XXXX");
+}
+printf("Do you want to enter popularity(1 or 0)");
+cin>>choice;
+if(choice=='1')
+{
+cout<<"Enter popularity"<<endl;
+cin>>s_pop;
+choice='0';//reset the value of choice.
+}
+else
+{
+s_pop=-1;
+}
+if(!strcmp(s_course,"XXXX"))//If course is not specified.
+{
+mdbst* temp;
+while(temp!=NULL)
+{
+data::traverse(temp->root,s_pname,s_loc,s_pop,s_slot);
+temp=temp->next;//to traverse to next course
+}
+}
+else//if course is specified.
+{
+mdbst* temp;
+while(temp!=NULL )
+{
+if(!strcmp(s_course,temp->course))//to traverse to the specified course.
+{
+data::traverse(temp->root,s_pname,s_loc,s_pop,s_slot);
+break;
+}
+temp=temp->next;//to traverse to next course.
+}
+}
+temp=temp->next;
+}
